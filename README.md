@@ -29,22 +29,6 @@ rl   = lambda : conn.recvline()
 uu32 = lambda d: u32(d.ljust(4, b'\x00'))
 uu64 = lambda d: u64(d.ljust(8, b'\x00'))
 
-def sign_up(username, password):
-    sla(b'> ', b'1')
-    sa(b'username: ', username)
-    sa(b'password: ', password)
-
-def sign_in(username, password):
-    sla(b'> ', b'2')
-    sa(b'username: ', username)
-    sa(b'password: ', password)
-
-def remove_account():
-    sla(b'> ', b'3')
-
-def get_shell():
-    sla(b'> ', b'4')
-
 conn = start()
 
 conn.interactive()
